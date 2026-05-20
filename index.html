@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Ticketing System</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a1a;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 12px;
+            min-height: 100vh;
+        }
+        h1 { font-size: 1.3rem; text-align: center; padding: 10px 0; }
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .card h2 { font-size: 1rem; margin-bottom: 10px; color: #444; }
+        input[type="text"], input[type="file"], select {
+            width: 100%; padding: 10px; border: 1px solid #d1d5db;
+            border-radius: 8px; font-size: 1rem; margin-bottom: 8px;
+            background: #fafafa;
+        }
+        input:focus { outline: none; border-color: #2563eb; background: #fff; }
+        button {
+            padding: 10px 16px; border: none; border-radius: 8px;
+            font-size: 0.95rem; cursor: pointer; font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.7; }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-success { background: #16a34a; color: #fff; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-secondary { background: #e5e7eb; color: #333; }
+        .btn-full { width: 100%; }
+        .stats {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 8px; text-align: center;
+        }
+        .stat {
+            padding: 10px 4px; background: #f0f4ff; border-radius: 8px;
+        }
+        .stat .num { font-size: 1.4rem; font-weight: 700; color: #2563eb; }
+        .stat .label { font-size: 0.7rem; color: #666; margin-top: 2px; }
+        .stat.green .num { color: #16a34a; }
+        .stat.green { background: #f0fdf4; }
+        .stat.orange .num { color: #ea580c; }
+        .stat.orange { background: #fff7ed; }
+        .result {
+            padding: 12px; border-radius: 8px; margin-top: 10px;
+            font-size: 0.95rem; line-height: 1.5;
+        }
+        .result.found { background: #f0fdf4; border: 1px solid #86efac; }
+        .result.not-found { background: #fef2f2; border: 1px solid #fca5a5; }
+        .result.already { background: #fffbeb; border: 1px solid #fde68a; }
+        .entry-list { max-height: 350px; overflow-y: auto; }
+        .entry-item {
+            padding: 8px 0; border-bottom: 1px solid #f0f0f0;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.85rem;
+        }
+        .entry-item .name { font-weight: 600; }
+        .entry-item .meta { color: #888; font-size: 0.75rem; text-align: right; }
+        .entry-item .unpaid-badge {
+            background: #fef2f2; color: #dc2626; padding: 2px 6px;
+            border-radius: 4px; font-size: 0.7rem; font-weight: 600;
+        }
+        .tabs {
+            display: flex; gap: 4px; margin-bottom: 12px;
+            background: #e5e7eb; border-radius: 10px; padding: 3px;
+        }
+        .tabs button {
+            flex: 1; background: transparent; color: #666;
+            border-radius: 8px; padding: 8px 4px; font-size: 0.8rem;
+        }
+        .tabs button.active { background: #fff; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .hidden { display: none !important; }
+        label { font-size: 0.8rem; color: #555; margin-bottom: 4px; display: block; }
+        .map-group { margin-bottom: 6px; }
+        .empty-msg { color: #aaa; text-align: center; padding: 20px; font-size: 0.9rem; }
+        .search-row { display: flex; gap: 8px; }
+        .search-row input { flex: 1; margin-bottom: 0; }
+        .search-row button { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <h1>🎫 Event Ticketing</h1>
+
+    <!-- Dashboard Stats -->
+    <div class="card">
+        <div class="stats">
+            <div class="stat">
+                <div class="num" id="statTotal">0</div>
+                <div class="label">Total Students</div>
+            </div>
+            <div class="stat green">
+                <div class="num" id="statEntered">0</div>
+                <div class="label">Entered</div>
+            </div>
+            <div class="stat orange">
+                <div class="num" id="statPending">0</div>
+                <div class="label">Remaining</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button id="tabBtn-verify" class="active" onclick="switchTab('verify')">✅ Verify</button>
+        <button id="tabBtn-entries" onclick="switchTab('entries')">📋 Entries</button>
+        <button id="tabBtn-upload" onclick="switchTab('upload')">📤 Upload</button>
+    </div>
+
+    <!-- TAB: Verify -->
+    <div id="tab-verify" class="card">
+        <h2>Verify Student Entry</h2>
+        <div class="search-row">
+            <input type="text" id="searchInput" placeholder="Enter unique number..." inputmode="numeric" autofocus>
+            <button class="btn-primary" onclick="verifyStudent()">Search</button>
+        </div>
+        <div id="searchResult"></div>
+    </div>
+
+    <!-- TAB: Entries Log -->
+    <div id="tab-entries" class="card hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <h2 style="margin:0">Confirmed Entries</h2>
+            <button class="btn-secondary" onclick="exportCSV()" style="font-size:0.75rem;padding:6px 10px">📥 Export</button>
+        </div>
+        <div class="entry-list" id="entryList">
+            <div class="empty-msg">No entries yet</div>
+        </div>
+    </div>
+
+    <!-- TAB: Upload -->
+    <div id="tab-upload" class="card hidden">
+        <h2>Upload Student List</h2>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+        <div id="mappingUI" class="hidden" style="margin-top:10px">
+            <p style="font-weight:600;margin-bottom:8px">Map your columns:</p>
+            <div class="map-group">
+                <label>Unique ID / Roll Number column:</label>
+                <select id="mapId"></select>
+            </div>
+            <div class="map-group">
+                <label>Student Name column:</label>
+                <select id="mapName"></select>
+            </div>
+            <div class="map-group">
+                <label>Payment Status column:</label>
+                <select id="mapPaid"></select>
+            </div>
+            <div class="map-group">
+                <label>Value meaning "Paid" (e.g. Yes, Paid, Done):</label>
+                <input type="text" id="paidValue" placeholder="Yes">
+            </div>
+            <button class="btn-success btn-full" onclick="processFile()">✅ Import Students</button>
+            <p id="previewText" style="font-size:0.75rem;color:#888;margin-top:6px"></p>
+        </div>
+        <hr style="margin:16px 0;border:none;border-top:1px solid #eee">
+        <button class="btn-danger btn-full" onclick="clearAll()" style="font-size:0.85rem">🗑️ Clear All Data</button>
+    </div>
+
+<script>
+// ============= STATE =============
+let students = JSON.parse(localStorage.getItem('tkt_students') || '[]');
+let entries  = JSON.parse(localStorage.getItem('tkt_entries')  || '[]');
+let parsedRows = null;
+let parsedHeaders = [];
+
+// ============= INIT =============
+updateStats();
+renderEntries();
+
+// ============= TABS =============
+function switchTab(name) {
+    ['verify','entries','upload'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+        document.getElementById('tabBtn-' + t).classList.toggle('active', t === name);
+    });
+    if (name === 'verify') document.getElementById('searchInput').focus();
+}
+
+// ============= FILE UPLOAD =============
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const wb = XLSX.read(ev.target.result, { type: 'binary' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            parsedRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!parsedRows.length) { alert('No data found!'); return; }
+            parsedHeaders = Object.keys(parsedRows[0]);
+            fillSelects();
+            document.getElementById('mappingUI').classList.remove('hidden');
+            document.getElementById('previewText').textContent =
+                'Found ' + parsedRows.length + ' rows, ' + parsedHeaders.length + ' columns';
+        } catch(err) {
+            alert('Error reading file: ' + err.message);
+        }
+    };
+    reader.readAsBinaryString(file);
+});
+
+function fillSelects() {
+    ['mapId','mapName','mapPaid'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = parsedHeaders.map(h => '<option value="'+h+'">'+h+'</option>').join('');
+    });
+    // Auto-guess
+    parsedHeaders.forEach(h => {
+        const l = h.toLowerCase();
+        if (l.includes('id') || l.includes('roll') || l.includes('number') || l.includes('unique') || l.includes('srn'))
+            document.getElementById('mapId').value = h;
+        if (l.includes('name'))
+            document.getElementById('mapName').value = h;
+        if (l.includes('paid') || l.includes('payment') || l.includes('status') || l.includes('fee'))
+            document.getElementById('mapPaid').value = h;
+    });
+}
+
+function processFile() {
+    const idCol   = document.getElementById('mapId').value;
+    const nameCol = document.getElementById('mapName').value;
+    const paidCol = document.getElementById('mapPaid').value;
+    const paidVal = document.getElementById('paidValue').value.trim().toLowerCase();
+
+    students = parsedRows.map(row => ({
+        id:   String(row[idCol]).trim(),
+        name: String(row[nameCol]).trim(),
+        paid: paidVal ? String(row[paidCol]).trim().toLowerCase() === paidVal : true
+    })).filter(s => s.id && s.id !== 'undefined');
+
+    localStorage.setItem('tkt_students', JSON.stringify(students));
+    updateStats();
+    alert('✅ Imported ' + students.length + ' students!');
+    document.getElementById('mappingUI').classList.add('hidden');
+    document.getElementById('fileInput').value = '';
+}
+
+// ============= VERIFY =============
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') verifyStudent();
+});
+
+function verifyStudent() {
+    const q = document.getElementById('searchInput').value.trim();
+    const div = document.getElementById('searchResult');
+    if (!q) { div.innerHTML = ''; return; }
+
+    const stu = students.find(s => s.id === q);
+    if (!stu) {
+        div.innerHTML = '<div class="result not-found">❌ <b>Not Found</b><br>No student with ID: ' + q + '</div>';
+        return;
+    }
+
+    const existing = entries.find(e => e.id === stu.id);
+    if (existing) {
+        div.innerHTML = '<div class="result already">⚠️ <b>Already Entered</b><br>' +
+            stu.name + ' (' + stu.id + ')<br><small>Entered at ' + existing.time + '</small></div>';
+        return;
+    }
+
+    const badge = stu.paid
+        ? '<span style="color:#16a34a;font-weight:700">✅ PAID</span>'
+        : '<span style="color:#dc2626;font-weight:700">❌ NOT PAID</span>';
+
+    div.innerHTML = '<div class="result found">' +
+        '<b>' + stu.name + '</b><br>ID: ' + stu.id + '<br>Payment: ' + badge +
+        '<br><br><button class="btn-success btn-full" onclick="confirmEntry(\'' +
+        stu.id.replace(/'/g, "\\'") + '\')">✅ Confirm Entry</button></div>';
+}
+
+function confirmEntry(id) {
+    if (entries.find(e => e.id === id)) { verifyStudent(); return; }
+    const stu = students.find(s => s.id === id);
+    if (!stu) return;
+
+    const entry = {
+        id: stu.id,
+        name: stu.name,
+        paid: stu.paid,
+        time: new Date().toLocaleTimeString(),
+        date: new Date().toLocaleDateString()
+    };
+    entries.unshift(entry);
+    localStorage.setItem('tkt_entries', JSON.stringify(entries));
+    updateStats();
+    renderEntries();
+
+    document.getElementById('searchResult').innerHTML =
+        '<div class="result found">✅ <b>Entry Confirmed!</b><br>' + stu.name + ' (' + stu.id + ')</div>';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchInput').focus();
+}
+
+// ============= ENTRIES LIST =============
+function renderEntries() {
+    const div = document.getElementById('entryList');
+    if (!entries.length) { div.innerHTML = '<div class="empty-msg">No entries yet</div>'; return; }
+    div.innerHTML = entries.map((e, i) => {
+        const badge = e.paid ? '' : ' <span class="unpaid-badge">UNPAID</span>';
+        return '<div class="entry-item"><div><span class="name">' + e.name + '</span>' + badge +
+            '<br><span style="color:#888;font-size:0.75rem">ID: ' + e.id + '</span></div>' +
+            '<div class="meta">#' + (entries.length - i) + '<br>' + e.time + '</div></div>';
+    }).join('');
+}
+
+// ============= STATS =============
+function updateStats() {
+    const total = students.length;
+    const entered = entries.length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statEntered').textContent = entered;
+    document.getElementById('statPending').textContent = Math.max(0, total - entered);
+}
+
+// ============= EXPORT =============
+function exportCSV() {
+    if (!entries.length) { alert('No entries to export'); return; }
+    let csv = 'Sr,ID,Name,Paid,Time,Date\n';
+    entries.forEach((e, i) => {
+        csv += (i+1) + ',' + e.id + ',"' + e.name + '",' + (e.paid?'Yes':'No') + ',' + e.time + ',' + (e.date||'') + '\n';
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'confirmed_entries_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+}
+
+// ============= CLEAR =============
+function clearAll() {
+    if (!confirm('Are you sure? This will delete ALL student data and entry records.')) return;
+    students = []; entries = [];
+    localStorage.removeItem('tkt_students');
+    localStorage.removeItem('tkt_entries');
+    updateStats(); renderEntries();
+    document.getElementById('searchResult').innerHTML = '';
+    alert('All data cleared.');
+}
+</script>
+</body>
+</html>
