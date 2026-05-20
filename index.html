@@ -133,19 +133,19 @@ let parsedHeaders = [];
 let unsubStudents = null;
 let unsubEntries = null;
 
+// ============= FIREBASE CONFIG =============
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyC1P-903bUeeEqmQw3JTdS7395elQvNUNI",
+    authDomain: "ticketing-a4306.firebaseapp.com",
+    projectId: "ticketing-a4306",
+    storageBucket: "ticketing-a4306.firebasestorage.app",
+    messagingSenderId: "14638660466",
+    appId: "1:14638660466:web:a0faf24ed666d29a40fbeb"
+};
+
 // ============= FIREBASE INIT =============
 (function init() {
-    const saved = localStorage.getItem('fb_config');
-    if (saved) {
-        try {
-            const config = JSON.parse(saved);
-            startFirebase(config);
-        } catch(e) {
-            showSetup();
-        }
-    } else {
-        showSetup();
-    }
+    startFirebase(FIREBASE_CONFIG);
 })();
 
 function showSetup() {
