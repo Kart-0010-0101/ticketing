@@ -298,11 +298,11 @@ document.getElementById('searchInput').addEventListener('keydown', function(e) {
 });
 
 function verifyStudent() {
-    const q = document.getElementById('searchInput').value.trim();
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
     const div = document.getElementById('searchResult');
     if (!q) { div.innerHTML = ''; return; }
 
-    const stu = students.find(s => s.id === q);
+    const stu = students.find(s => s.id.toLowerCase() === q);
     if (!stu) {
         div.innerHTML = '<div class="result not-found">❌ <b>Not Found</b><br>No student with ID: ' + q + '</div>';
         return;
